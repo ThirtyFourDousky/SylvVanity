@@ -26,7 +26,7 @@ namespace SylvVanity.Content.Items
                 string equipSlotName = headItem.ModItem.Name;
                 int equipSlot = EquipLoader.GetEquipSlot(Mod, equipSlotName, EquipType.Head);
 
-                if (!drawInfo.drawPlayer.dead && equipSlot == drawPlayer.head)
+                if (!drawPlayer.dead && equipSlot == drawPlayer.head)
                 {
                     int dyeShader = drawPlayer.dye?[0].dye ?? 0;
 
@@ -34,23 +34,23 @@ namespace SylvVanity.Content.Items
                     Vector2 headDrawPosition = drawInfo.Position - Main.screenPosition;
                     headDrawPosition += new Vector2((drawPlayer.width - drawPlayer.bodyFrame.Width) / 2f, drawPlayer.height - drawPlayer.bodyFrame.Height + 4f);
 
-                    // Apply manual offsets.
-                    headDrawPosition += new Vector2(drawPlayer.direction == 1 ? 8f : -6f, -22f);
-
                     // Floor the draw position to remove jitter.
                     headDrawPosition = headDrawPosition.Floor();
-
                     headDrawPosition += drawPlayer.headPosition + drawInfo.headVect;
 
-                    // Grab the extension texture.
-                    Texture2D extraPieceTexture = ModContent.Request<Texture2D>(ModContent.GetInstance<LucillesEars>().Texture).Value;
+                    // Draw hair.
+                    Texture2D hair = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucilleHair").Value;
+                    Rectangle hairFrame = drawPlayer.bodyFrame;
+                    hairFrame.Y -= 336;
+                    if (hairFrame.Y < 0)
+                        hairFrame.Y = 0;
 
-                    DrawData pieceDrawData = new(extraPieceTexture, headDrawPosition, null, drawInfo.colorArmorHead, drawPlayer.headRotation, drawInfo.headVect * 2f, 0.5f, drawInfo.playerEffect, 0)
+                    DrawData hairDrawData = new(hair, headDrawPosition, hairFrame, drawInfo.colorHair, drawPlayer.headRotation, drawInfo.headVect, 1f, drawInfo.playerEffect, 0)
                     {
                         shader = dyeShader
                     };
 
-                    drawInfo.DrawDataCache.Add(pieceDrawData);
+                    drawInfo.DrawDataCache.Add(hairDrawData);
                 }
             }
         }
