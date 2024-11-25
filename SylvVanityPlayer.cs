@@ -39,7 +39,7 @@ namespace SylvVanity
             if (EarTwitchAnimationCompletion >= 1f)
                 EarTwitchAnimationCompletion = 0f;
 
-            VelocityMovingAverage = Vector2.Lerp(VelocityMovingAverage, Player.velocity, 0.3f);
+            VelocityMovingAverage = Vector2.Lerp(VelocityMovingAverage, Player.velocity, 0.3f).MoveTowards(Player.velocity, 0.5f);
         }
     }
 }

@@ -97,7 +97,7 @@ namespace SylvVanity.Content.Items
             float rightEarRotation = earRotation + twitchAngleOffset * 0.04f;
 
             // Calculate the size of the ears.
-            Vector2 earScale = Vector2.One * 0.425f;
+            Vector2 earScale = Vector2.One * 0.5f;
 
             float squish = Utilities.Cos01(drawPlayer.Center.X * 0.017f) * Utilities.Cos01(drawPlayer.Center.X * 0.011f) * Utilities.InverseLerp(7f, 21f, drawPlayer.velocity.Length()) * 0.25f;
             earScale.X *= 1f - squish * 0.6f;
@@ -167,14 +167,14 @@ namespace SylvVanity.Content.Items
             Main.spriteBatch.Draw(target, center, null, lightColor, 0f, target.Size() * 0.5f, 1f, 0, 0f);
         }
 
-        private static float FeelerWidthFunction(float completionRatio) => 2.4f;
+        private static float FeelerWidthFunction(float completionRatio) => 2.8f;
 
         private static Color FeelerColorFunction(float completionRatio) => new(232, 229, 245);
 
         private static void ApplyPixelation(Texture2D texture)
         {
             ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
-            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 4f / texture.Size());
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 2f / texture.Size());
             pixelationShader.Apply();
         }
 
