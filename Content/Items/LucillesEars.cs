@@ -79,7 +79,7 @@ namespace SylvVanity.Content.Items
             float rightEarRotation = earRotation + twitchAngleOffset * 0.04f;
 
             // Calculate the size of the ears.
-            Vector2 earScale = Vector2.One * 0.42f;
+            Vector2 earScale = Vector2.One * 0.39f;
 
             float squish = Utilities.Cos01(drawPlayer.Center.X * 0.017f) * Utilities.InverseLerp(4f, 19.5f, drawPlayer.velocity.Length()) * 0.25f;
             earScale.X *= 1f - squish;
