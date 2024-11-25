@@ -1,3 +1,4 @@
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ModLoader;
 
@@ -9,6 +10,15 @@ namespace SylvVanity
         /// A 0-1 animation completion interpolation for ear twitches.
         /// </summary>
         public float EarTwitchAnimationCompletion
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The moving average of this player's velocity. Used for the motion of the ribbons.
+        /// </summary>
+        public Vector2 VelocityMovingAverage
         {
             get;
             set;
@@ -28,6 +38,8 @@ namespace SylvVanity
                 EarTwitchAnimationCompletion += 0.05f;
             if (EarTwitchAnimationCompletion >= 1f)
                 EarTwitchAnimationCompletion = 0f;
+
+            VelocityMovingAverage = Vector2.Lerp(VelocityMovingAverage, Player.velocity, 0.3f);
         }
     }
 }

@@ -15,10 +15,23 @@ namespace SylvVanity.Content.Items
     [AutoloadEquip(EquipType.Head)]
     public class LucillesEars : ModItem
     {
+        /// <summary>
+        /// The render target that holds ribbon primitive data.
+        /// </summary>
+        public static InstancedRequestableTarget? RibbonTarget
+        {
+            get;
+            private set;
+        }
+
         public override void SetStaticDefaults()
         {
             if (Main.netMode != NetmodeID.Server)
+            {
                 ArmorIDs.Head.Sets.DrawHead[Item.headSlot] = true;
+                RibbonTarget = new();
+                Main.ContentThatNeedsRenderTargets.Add(RibbonTarget);
+            }
 
             On_LegacyPlayerRenderer.DrawPlayerFull += RenderEarsWrapper;
         }
@@ -39,7 +52,7 @@ namespace SylvVanity.Content.Items
 
                 if (!drawPlayer.dead && equipSlot == drawPlayer.head)
                 {
-                    Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+                    Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
                     DrawEars(drawPlayer);
                     Main.spriteBatch.End();
                 }
@@ -58,6 +71,7 @@ namespace SylvVanity.Content.Items
             earDrawPosition += drawPlayer.headPosition + headVect;
             earDrawPosition.Y = MathF.Round(earDrawPosition.Y / 2f) * 2f;
 
+            // Rotate the ears based on the player's rotation.
             earDrawPosition = earDrawPosition.RotatedBy(drawPlayer.fullRotation, drawPlayer.Center - Main.screenPosition);
 
             Texture2D leftEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarLeft").Value;
@@ -93,25 +107,67 @@ namespace SylvVanity.Content.Items
             SpriteEffects earDirection = drawPlayer.direction == 1 ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
             ApplyPixelation(leftEar);
-            Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, Color.White, leftEarRotation, new Vector2(leftEar.Width * 0.5f, leftEar.Height), earScale, earDirection, 0);
+            Color leftEarColor = Lighting.GetColor((leftEarDrawPosition + Main.screenPosition).ToTileCoordinates());
+            Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, leftEarColor, leftEarRotation, new Vector2(leftEar.Width * 0.5f, leftEar.Height), earScale, earDirection, 0);
 
             ApplyPixelation(rightEar);
-            Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
+            Color rightEarColor = Lighting.GetColor((rightEarDrawPosition + Main.screenPosition).ToTileCoordinates());
+            Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, rightEarColor, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
 
             // Draw feelers.
-            DrawRibbonFeelers(rightEarDrawPosition + Main.screenPosition);
+            Vector2 feelerCenter = rightEarDrawPosition - Vector2.UnitY.RotatedBy(drawPlayer.fullRotation) * 4f;
+            Vector2 velocityOffset = -vanityPlayer.VelocityMovingAverage * new Vector2(0.03f, 0.011f);
+            Vector2 feelerEndOffset = Vector2.UnitY * MathF.Abs(vanityPlayer.VelocityMovingAverage.X) * -0.6f;
+
+            DrawRibbonFeeler(feelerCenter, Vector2.UnitX * drawPlayer.direction * 0.8f + velocityOffset, feelerEndOffset, rightEarColor, drawPlayer.whoAmI);
+            DrawRibbonFeeler(feelerCenter, -Vector2.UnitX * drawPlayer.direction + velocityOffset, feelerEndOffset, rightEarColor, drawPlayer.whoAmI + 1000);
 
             // Draw the ribbon again to ensure that it layers over the feelers.
             ApplyPixelation(rightEarRibbon);
-            Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, rightEarRibbon.Height), earScale, earDirection, 0);
+            Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, rightEarColor, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, rightEarRibbon.Height), earScale, earDirection, 0);
         }
 
-        private static void DrawRibbonFeelers(Vector2 center)
+        private static void DrawRibbonFeeler(Vector2 center, Vector2 direction, Vector2 endOffset, Color lightColor, int identifier)
         {
-            ManagedShader feelerShader = ShaderManager.GetShader("SylvVanity.LucilleFeelerShader");
+            if (RibbonTarget is null)
+                return;
+
+            Vector2 ribbonTargetArea = new(200f);
+            RibbonTarget.Request((int)ribbonTargetArea.X, (int)ribbonTargetArea.Y, identifier, () =>
+            {
+                ManagedShader feelerShader = ShaderManager.GetShader("SylvVanity.LucilleFeelerShader");
+                feelerShader.TrySetParameter("feelerColorStart", 0.61f);
+                feelerShader.TrySetParameter("colorSpacingFactor", 1.9f);
+                feelerShader.TrySetParameter("pixelationFactor", 40f);
+                feelerShader.TrySetParameter("outlineColor", new Color(109, 102, 112).ToVector4());
+                feelerShader.Apply();
+
+                PrimitiveSettings settings = new(FeelerWidthFunction, FeelerColorFunction, Shader: feelerShader, UseUnscaledMatrix: true,
+                    ProjectionAreaWidth: Main.instance.GraphicsDevice.Viewport.Width, ProjectionAreaHeight: Main.instance.GraphicsDevice.Viewport.Height);
+
+                Vector2[] feelerDrawPositions = new Vector2[16];
+                for (int i = 0; i < feelerDrawPositions.Length; i++)
+                {
+                    float completionRatio = i / (float)(feelerDrawPositions.Length - 1f);
+                    float verticalOffsetInterpolant = Utilities.InverseLerp(0.1f, 0.5f, completionRatio);
+                    Vector2 verticalOffset = Vector2.UnitY * MathF.Sin(MathHelper.Pi * completionRatio * 2f - Main.GlobalTimeWrappedHourly * 3.2f + direction.X * 2f) * verticalOffsetInterpolant * 2.6f;
+
+                    feelerDrawPositions[i] = ribbonTargetArea * 0.5f + direction * i * 1.9f + verticalOffset + Main.screenPosition + endOffset * completionRatio;
+                }
+
+                PrimitiveRenderer.RenderTrail(feelerDrawPositions, settings, 40);
+            });
+
+            if (!RibbonTarget.TryGetTarget(identifier, out RenderTarget2D? target) || target is null)
+                return;
+
+            ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 0.7f / target.Size());
+            pixelationShader.Apply();
+            Main.spriteBatch.Draw(target, center, null, lightColor, 0f, target.Size() * 0.5f, 1f, 0, 0f);
         }
 
-        private static float FeelerWidthFunction(float completionRatio) => 3f;
+        private static float FeelerWidthFunction(float completionRatio) => 2.4f;
 
         private static Color FeelerColorFunction(float completionRatio) => new(232, 229, 245);
 
