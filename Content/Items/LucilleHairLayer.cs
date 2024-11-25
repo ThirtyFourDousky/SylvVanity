@@ -7,7 +7,7 @@ using Terraria.ModLoader;
 
 namespace SylvVanity.Content.Items
 {
-    public class LucillesEarsLayer : PlayerDrawLayer
+    public class LucilleHairLayer : PlayerDrawLayer
     {
         public override Position GetDefaultPosition() => new AfterParent(PlayerDrawLayers.Head);
 
