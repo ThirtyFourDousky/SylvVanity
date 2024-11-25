@@ -10,13 +10,16 @@ namespace SylvVanity.Content.Items
         public override void SetStaticDefaults()
         {
             if (Main.netMode != NetmodeID.Server)
-                ArmorIDs.Head.Sets.DrawHead[Item.headSlot] = false;
+            {
+                ArmorIDs.Head.Sets.DrawHead[Item.headSlot] = true;
+                ArmorIDs.Head.Sets.DrawFullHair[Item.headSlot] = true;
+            }
         }
 
         public override void SetDefaults()
         {
-            Item.width = 72;
-            Item.height = 80;
+            Item.width = 66;
+            Item.height = 78;
             Item.scale = 0.5f;
             Item.rare = ItemRarityID.Pink;
             Item.vanity = true;

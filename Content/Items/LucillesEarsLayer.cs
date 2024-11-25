@@ -34,6 +34,9 @@ namespace SylvVanity.Content.Items
                     Vector2 headDrawPosition = drawInfo.Position - Main.screenPosition;
                     headDrawPosition += new Vector2((drawPlayer.width - drawPlayer.bodyFrame.Width) / 2f, drawPlayer.height - drawPlayer.bodyFrame.Height + 4f);
 
+                    // Apply manual offsets.
+                    headDrawPosition += new Vector2(drawPlayer.direction == 1 ? 8f : -6f, -22f);
+
                     // Floor the draw position to remove jitter.
                     headDrawPosition = headDrawPosition.Floor();
 
@@ -42,7 +45,7 @@ namespace SylvVanity.Content.Items
                     // Grab the extension texture.
                     Texture2D extraPieceTexture = ModContent.Request<Texture2D>(ModContent.GetInstance<LucillesEars>().Texture).Value;
 
-                    DrawData pieceDrawData = new(extraPieceTexture, headDrawPosition, null, drawInfo.colorArmorHead, drawPlayer.headRotation, drawInfo.headVect, 0.5f, drawInfo.playerEffect, 0)
+                    DrawData pieceDrawData = new(extraPieceTexture, headDrawPosition, null, drawInfo.colorArmorHead, drawPlayer.headRotation, drawInfo.headVect * 2f, 0.5f, drawInfo.playerEffect, 0)
                     {
                         shader = dyeShader
                     };
