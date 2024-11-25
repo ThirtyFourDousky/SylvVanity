@@ -1,0 +1,4 @@
+displayName = Sylveon Vanity
+author = Lucille Karma
+version = 1.0
+modReferences = Luminance
