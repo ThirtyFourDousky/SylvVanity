@@ -58,20 +58,23 @@ namespace SylvVanity.Content.Items
             earDrawPosition += drawPlayer.headPosition + headVect;
             earDrawPosition.Y = MathF.Round(earDrawPosition.Y / 2f) * 2f;
 
+            earDrawPosition = earDrawPosition.RotatedBy(drawPlayer.fullRotation, drawPlayer.Center - Main.screenPosition);
+
             Texture2D leftEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarLeft").Value;
             Texture2D rightEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
+            Texture2D rightEarRibbon = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
 
             Rectangle hairFrame = drawPlayer.bodyFrame;
             hairFrame.Y -= 336;
 
             if (hairFrame.Y == 56 || hairFrame.Y == 112 || hairFrame.Y == 168 || hairFrame.Y == 448 || hairFrame.Y == 504 || hairFrame.Y == 560)
-                earDrawPosition.Y -= 2f;
+                earDrawPosition -= Vector2.UnitY.RotatedBy(drawPlayer.fullRotation) * 2f;
 
-            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + Vector2.UnitX * (drawPlayer.direction == 1 ? -4f : 14f);
-            Vector2 rightEarDrawPosition = leftEarDrawPosition + Vector2.UnitX * drawPlayer.direction * 12f;
+            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + Vector2.UnitX.RotatedBy(drawPlayer.fullRotation) * (drawPlayer.direction == 1 ? -4f : 14f);
+            Vector2 rightEarDrawPosition = leftEarDrawPosition + Vector2.UnitX.RotatedBy(drawPlayer.fullRotation) * drawPlayer.direction * 12f;
 
             // Calculate the base ear rotation.
-            float earRotation = drawPlayer.headRotation + drawPlayer.direction * -0.16f;
+            float earRotation = drawPlayer.fullRotation + drawPlayer.headRotation + drawPlayer.direction * -0.16f;
 
             // Calculate the angular offset of ears based on twitch.
             float twitchAngleOffset = Utilities.Convert01To010(EasingCurves.Evaluate(EasingCurves.Cubic, EasingType.Out, vanityPlayer.EarTwitchAnimationCompletion)) * drawPlayer.direction * 0.26f;
@@ -94,7 +97,23 @@ namespace SylvVanity.Content.Items
 
             ApplyPixelation(rightEar);
             Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
+
+            // Draw feelers.
+            DrawRibbonFeelers(rightEarDrawPosition + Main.screenPosition);
+
+            // Draw the ribbon again to ensure that it layers over the feelers.
+            ApplyPixelation(rightEarRibbon);
+            Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, rightEarRibbon.Height), earScale, earDirection, 0);
         }
+
+        private static void DrawRibbonFeelers(Vector2 center)
+        {
+            ManagedShader feelerShader = ShaderManager.GetShader("SylvVanity.LucilleFeelerShader");
+        }
+
+        private static float FeelerWidthFunction(float completionRatio) => 3f;
+
+        private static Color FeelerColorFunction(float completionRatio) => new(232, 229, 245);
 
         private static void ApplyPixelation(Texture2D texture)
         {
