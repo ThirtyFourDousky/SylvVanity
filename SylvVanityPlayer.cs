@@ -26,7 +26,7 @@ namespace SylvVanity
 
         public override void PreUpdateMovement()
         {
-            // Random start the ear twich animation.
+            // Randomly start the ear twich animation.
             if (Player.velocity.Length() <= 1f && Main.rand.NextBool(120) && EarTwitchAnimationCompletion <= 0f)
             {
                 EarTwitchAnimationCompletion = 0.01f;
