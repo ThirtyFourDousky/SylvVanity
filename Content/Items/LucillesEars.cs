@@ -1,5 +1,6 @@
 ﻿using Luminance.Common.Easings;
 using Luminance.Common.Utilities;
+using Luminance.Core.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -85,9 +86,17 @@ namespace SylvVanity.Content.Items
             earScale.X *= 1f - squish * 0.6f;
             earScale.Y *= 1f + squish * 1.3f;
 
+            ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 3f / leftEar.Size());
+            pixelationShader.Apply();
+
             // Draw ears.
             SpriteEffects earDirection = drawPlayer.direction == 1 ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
             Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, Color.White, leftEarRotation, new Vector2(leftEar.Width * 0.5f, leftEar.Height), earScale, earDirection, 0);
+
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 3.3f / rightEar.Size());
+            pixelationShader.Apply();
+
             Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
         }
 
