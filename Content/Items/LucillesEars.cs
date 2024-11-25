@@ -1,5 +1,6 @@
 ﻿using Luminance.Common.Easings;
 using Luminance.Common.Utilities;
+using Luminance.Core.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -38,7 +39,7 @@ namespace SylvVanity.Content.Items
 
                 if (!drawPlayer.dead && equipSlot == drawPlayer.head)
                 {
-                    Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, Main.DefaultSamplerState, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+                    Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.AnisotropicClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
                     DrawEars(drawPlayer);
                     Main.spriteBatch.End();
                 }
@@ -79,16 +80,27 @@ namespace SylvVanity.Content.Items
             float rightEarRotation = earRotation + twitchAngleOffset * 0.04f;
 
             // Calculate the size of the ears.
-            Vector2 earScale = Vector2.One * 0.46f;
+            Vector2 earScale = Vector2.One * 0.425f;
 
-            float squish = Utilities.Cos01(drawPlayer.Center.X * 0.017f) * Utilities.InverseLerp(7f, 25f, drawPlayer.velocity.Length()) * 0.25f;
+            float squish = Utilities.Cos01(drawPlayer.Center.X * 0.017f) * Utilities.Cos01(drawPlayer.Center.X * 0.011f) * Utilities.InverseLerp(7f, 21f, drawPlayer.velocity.Length()) * 0.25f;
             earScale.X *= 1f - squish * 0.6f;
             earScale.Y *= 1f + squish * 1.3f;
 
             // Draw ears.
             SpriteEffects earDirection = drawPlayer.direction == 1 ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+
+            ApplyPixelation(leftEar);
             Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, Color.White, leftEarRotation, new Vector2(leftEar.Width * 0.5f, leftEar.Height), earScale, earDirection, 0);
+
+            ApplyPixelation(rightEar);
             Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
+        }
+
+        private static void ApplyPixelation(Texture2D texture)
+        {
+            ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 4f / texture.Size());
+            pixelationShader.Apply();
         }
 
         public override void SetDefaults()
