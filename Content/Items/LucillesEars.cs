@@ -119,8 +119,10 @@ namespace SylvVanity.Content.Items
             Vector2 velocityOffset = -vanityPlayer.VelocityMovingAverage * new Vector2(0.03f, 0.011f);
             Vector2 feelerEndOffset = Vector2.UnitY * MathF.Abs(vanityPlayer.VelocityMovingAverage.X) * -0.6f;
 
-            DrawRibbonFeeler(feelerCenter, Vector2.UnitX * drawPlayer.direction * 0.8f + velocityOffset, feelerEndOffset, rightEarColor, drawPlayer.whoAmI);
-            DrawRibbonFeeler(feelerCenter, -Vector2.UnitX * drawPlayer.direction + velocityOffset, feelerEndOffset, rightEarColor, drawPlayer.whoAmI + 1000);
+            Vector2 leftFeelerDirection = -Vector2.UnitX * drawPlayer.direction + velocityOffset;
+            Vector2 rightFeelerDirection = Vector2.UnitX * drawPlayer.direction * 0.8f + velocityOffset;
+            DrawRibbonFeeler(feelerCenter, leftFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI);
+            DrawRibbonFeeler(feelerCenter, rightFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI + 1000);
 
             // Draw the ribbon again to ensure that it layers over the feelers.
             ApplyPixelation(rightEarRibbon);
