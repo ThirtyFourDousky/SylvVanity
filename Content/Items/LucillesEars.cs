@@ -72,20 +72,24 @@ namespace SylvVanity.Content.Items
             earDrawPosition.Y = MathF.Round(earDrawPosition.Y / 2f) * 2f;
 
             // Rotate the ears based on the player's rotation.
-            earDrawPosition = earDrawPosition.RotatedBy(drawPlayer.fullRotation, drawPlayer.Center - Main.screenPosition);
+            earDrawPosition = earDrawPosition.RotatedBy(drawPlayer.fullRotation, drawPlayer.TopLeft + drawPlayer.fullRotationOrigin + Vector2.UnitY * drawPlayer.gfxOffY - Main.screenPosition);
 
             Texture2D leftEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarLeft").Value;
             Texture2D rightEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
             Texture2D rightEarRibbon = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
 
+            // Calculate rotation-relative up and forward vectors.
+            Vector2 forward = Vector2.UnitX.RotatedBy(drawPlayer.fullRotation);
+            Vector2 up = Vector2.UnitY.RotatedBy(drawPlayer.fullRotation);
+
             Rectangle hairFrame = drawPlayer.bodyFrame;
             hairFrame.Y -= 336;
 
             if (hairFrame.Y == 56 || hairFrame.Y == 112 || hairFrame.Y == 168 || hairFrame.Y == 448 || hairFrame.Y == 504 || hairFrame.Y == 560)
-                earDrawPosition -= Vector2.UnitY.RotatedBy(drawPlayer.fullRotation) * 2f;
+                earDrawPosition -= up * 2f;
 
-            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + Vector2.UnitX.RotatedBy(drawPlayer.fullRotation) * (drawPlayer.direction == 1 ? -4f : 14f);
-            Vector2 rightEarDrawPosition = leftEarDrawPosition + Vector2.UnitX.RotatedBy(drawPlayer.fullRotation) * drawPlayer.direction * 12f;
+            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + forward * (drawPlayer.direction == 1 ? -4f : 14f);
+            Vector2 rightEarDrawPosition = leftEarDrawPosition + forward * drawPlayer.direction * 12f;
 
             // Calculate the base ear rotation.
             float earRotation = drawPlayer.fullRotation + drawPlayer.headRotation + drawPlayer.direction * -0.16f;
@@ -115,21 +119,21 @@ namespace SylvVanity.Content.Items
             Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, rightEarColor, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
 
             // Draw feelers.
-            Vector2 feelerCenter = rightEarDrawPosition - Vector2.UnitY.RotatedBy(drawPlayer.fullRotation) * 4f;
+            Vector2 feelerCenter = rightEarDrawPosition - up * 4f;
             Vector2 velocityOffset = -vanityPlayer.VelocityMovingAverage * new Vector2(0.03f, 0.011f);
             Vector2 feelerEndOffset = Vector2.UnitY * MathF.Abs(vanityPlayer.VelocityMovingAverage.X) * -0.6f;
 
             Vector2 leftFeelerDirection = -Vector2.UnitX * drawPlayer.direction + velocityOffset;
             Vector2 rightFeelerDirection = Vector2.UnitX * drawPlayer.direction * 0.8f + velocityOffset;
-            DrawRibbonFeeler(feelerCenter, leftFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI);
-            DrawRibbonFeeler(feelerCenter, rightFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI + 1000);
+            DrawRibbonFeeler(drawPlayer, feelerCenter, leftFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI);
+            DrawRibbonFeeler(drawPlayer, feelerCenter, rightFeelerDirection, feelerEndOffset, rightEarColor, drawPlayer.whoAmI + 1000);
 
             // Draw the ribbon again to ensure that it layers over the feelers.
             ApplyPixelation(rightEarRibbon);
             Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, rightEarColor, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, rightEarRibbon.Height), earScale, earDirection, 0);
         }
 
-        private static void DrawRibbonFeeler(Vector2 center, Vector2 direction, Vector2 endOffset, Color lightColor, int identifier)
+        private static void DrawRibbonFeeler(Player drawPlayer, Vector2 center, Vector2 direction, Vector2 endOffset, Color lightColor, int identifier)
         {
             if (RibbonTarget is null)
                 return;
@@ -147,6 +151,7 @@ namespace SylvVanity.Content.Items
                 PrimitiveSettings settings = new(FeelerWidthFunction, FeelerColorFunction, Shader: feelerShader, UseUnscaledMatrix: true,
                     ProjectionAreaWidth: Main.instance.GraphicsDevice.Viewport.Width, ProjectionAreaHeight: Main.instance.GraphicsDevice.Viewport.Height);
 
+                Vector2 targetCenter = ribbonTargetArea * 0.5f + Main.screenPosition;
                 Vector2[] feelerDrawPositions = new Vector2[16];
                 for (int i = 0; i < feelerDrawPositions.Length; i++)
                 {
@@ -154,7 +159,8 @@ namespace SylvVanity.Content.Items
                     float verticalOffsetInterpolant = Utilities.InverseLerp(0.1f, 0.5f, completionRatio);
                     Vector2 verticalOffset = Vector2.UnitY * MathF.Sin(MathHelper.Pi * completionRatio * 2f - Main.GlobalTimeWrappedHourly * 3.2f + direction.X * 2f) * verticalOffsetInterpolant * 2.6f;
 
-                    feelerDrawPositions[i] = ribbonTargetArea * 0.5f + direction * i * 1.9f + verticalOffset + Main.screenPosition + endOffset * completionRatio;
+                    feelerDrawPositions[i] = targetCenter + direction * i * 1.9f + verticalOffset + endOffset * completionRatio;
+                    feelerDrawPositions[i] = feelerDrawPositions[i].RotatedBy(drawPlayer.fullRotation, targetCenter);
                 }
 
                 PrimitiveRenderer.RenderTrail(feelerDrawPositions, settings, 40);
