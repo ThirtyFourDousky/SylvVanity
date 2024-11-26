@@ -120,7 +120,6 @@ namespace SylvVanity.Content.Items
             Texture2D rightEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
             Texture2D rightEarRibbon = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
 
-            // Calculate rotation-relative up and forward vectors.
             Vector2 forward = Vector2.UnitX;
             Vector2 up = Vector2.UnitY;
 
@@ -209,7 +208,7 @@ namespace SylvVanity.Content.Items
                 return;
 
             ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
-            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 0.7f / target.Size());
+            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 0.8f / target.Size());
             pixelationShader.Apply();
             Main.spriteBatch.Draw(target, center, null, lightColor, 0f, target.Size() * 0.5f, 1f, 0, 0f);
         }
