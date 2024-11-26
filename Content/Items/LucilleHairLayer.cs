@@ -213,7 +213,7 @@ namespace SylvVanity.Content.Items
             Main.spriteBatch.Draw(target, center, null, lightColor, 0f, target.Size() * 0.5f, 1f, 0, 0f);
         }
 
-        private static float FeelerWidthFunction(float completionRatio) => 2.8f;
+        private static float FeelerWidthFunction(float completionRatio) => 2.85f;
 
         private static Color FeelerColorFunction(float completionRatio) => new(232, 229, 245);
 
