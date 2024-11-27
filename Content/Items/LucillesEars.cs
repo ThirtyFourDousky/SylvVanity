@@ -30,6 +30,7 @@ namespace SylvVanity.Content.Items
             CreateRecipe().
                 AddIngredient(ItemID.Silk, 10).
                 AddIngredient(ItemID.GiantBow).
+                AddTile(TileID.Loom).
                 Register();
         }
     }
