@@ -1,1 +1,2 @@
-Modify this file with a description of your mod.
+Adds a simple vanity item I originally made for myself that gives the player large Sylveon ears.
+The recipe for the vanity item requires 10 silk and a giant bow.

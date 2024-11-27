@@ -10,7 +10,10 @@ namespace SylvVanity.Content.Items
         public override void SetStaticDefaults()
         {
             if (Main.netMode != NetmodeID.Server)
+            {
                 ArmorIDs.Head.Sets.DrawHead[Item.headSlot] = true;
+                ArmorIDs.Head.Sets.DrawFullHair[Item.headSlot] = true;
+            }
         }
 
         public override void SetDefaults()
@@ -20,6 +23,13 @@ namespace SylvVanity.Content.Items
             Item.scale = 0.5f;
             Item.rare = ItemRarityID.Pink;
             Item.vanity = true;
+        }
+
+        public override void AddRecipes()
+        {
+            CreateRecipe().
+                AddIngredient(ItemID.Silk, 10).
+                AddIngredient(ItemID.GiantBow);
         }
     }
 }

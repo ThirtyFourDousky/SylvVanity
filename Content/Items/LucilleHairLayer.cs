@@ -1,8 +1,6 @@
-﻿using Luminance.Common.Easings;
-using Luminance.Common.Utilities;
-using Luminance.Core.Graphics;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ReLogic.Content;
 using System;
 using Terraria;
 using Terraria.DataStructures;
@@ -13,6 +11,43 @@ namespace SylvVanity.Content.Items
 {
     public class LucilleHairLayer : PlayerDrawLayer
     {
+        /// <summary>
+        /// A custom vertex type with a position using Vector2 instead of Vector4, as Terraria is only a 2D game.
+        /// </summary>
+        /// <remarks>This represents a vertex that will be rendered by the GPU.</remarks>
+        public readonly struct VertexPosition2DColorTexture(Vector2 position, Color color, Vector2 textureCoordinates, float widthCorrectionFactor) : IVertexType
+        {
+            /// <summary>
+            /// The position of the vertex.
+            /// </summary>
+            public readonly Vector2 Position = position;
+
+            /// <summary>
+            /// The color of the vertex.
+            /// </summary>
+            public readonly Color Color = color;
+
+            /// <summary>
+            /// The texture-coordinate of the vertex.
+            /// </summary>
+            /// /// <remarks>
+            /// The Z component isn't actually related to 3D, it holds the width of the vertex at the given point, since arbitrary data cannot be saved on a per-vertex basis and needs to be contained within some pre-defined format.
+            /// </remarks>
+            public readonly Vector3 TextureCoordinates = new(textureCoordinates, widthCorrectionFactor);
+
+            /// <summary>
+            /// The vertex declaration. This declares the layout and size of the data in the vertex shader.
+            /// </summary>
+            public VertexDeclaration VertexDeclaration => VertexDeclaration2D;
+
+            public static readonly VertexDeclaration VertexDeclaration2D = new(
+            [
+                new(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new(8, VertexElementFormat.Color, VertexElementUsage.Color, 0),
+                new(12, VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
+            ]);
+        }
+
         /// <summary>
         /// The render target that holds ear data.
         /// </summary>
@@ -71,20 +106,6 @@ namespace SylvVanity.Content.Items
                     headDrawPosition = headDrawPosition.Floor();
                     headDrawPosition += drawPlayer.headPosition + drawInfo.headVect;
 
-                    // Draw hair.
-                    Texture2D hair = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucilleHair").Value;
-                    Rectangle hairFrame = drawPlayer.bodyFrame;
-                    hairFrame.Y -= 336;
-                    if (hairFrame.Y < 0)
-                        hairFrame.Y = 0;
-
-                    DrawData hairDrawData = new(hair, headDrawPosition, hairFrame, drawInfo.colorHair, drawPlayer.headRotation, drawInfo.headVect, 1f, drawInfo.playerEffect, 0)
-                    {
-                        shader = dyeShader
-                    };
-
-                    drawInfo.DrawDataCache.Add(hairDrawData);
-
                     // Draw ears.
                     EarTarget?.Request(400, 400, drawPlayer.whoAmI, () =>
                     {
@@ -136,7 +157,8 @@ namespace SylvVanity.Content.Items
             float earRotation = drawPlayer.direction * -0.16f;
 
             // Calculate the angular offset of ears based on twitch.
-            float twitchAngleOffset = Utilities.Convert01To010(EasingCurves.Evaluate(EasingCurves.Cubic, EasingType.Out, vanityPlayer.EarTwitchAnimationCompletion)) * drawPlayer.direction * 0.26f;
+            float easedTwitchAnimationCompletion = 1f - MathF.Pow(1f - vanityPlayer.EarTwitchAnimationCompletion, 3f);
+            float twitchAngleOffset = MathF.Sin(MathHelper.Pi * easedTwitchAnimationCompletion) * drawPlayer.direction * 0.26f;
 
             float leftEarRotation = earRotation - twitchAngleOffset;
             float rightEarRotation = earRotation + twitchAngleOffset * 0.04f;
@@ -144,7 +166,10 @@ namespace SylvVanity.Content.Items
             // Calculate the size of the ears.
             Vector2 earScale = Vector2.One * 0.5f;
 
-            float squish = Utilities.Cos01(drawPlayer.Center.X * 0.017f) * Utilities.Cos01(drawPlayer.Center.X * 0.011f) * Utilities.InverseLerp(7f, 21f, drawPlayer.velocity.Length()) * 0.25f;
+            float squishA = MathF.Cos(drawPlayer.Center.X * 0.017f) * 0.5f + 0.5f;
+            float squishB = MathF.Cos(drawPlayer.Center.X * 0.011f) * 0.5f + 0.5f;
+            float movementBounce = Utils.GetLerpValue(7f, 21f, drawPlayer.velocity.Length(), true);
+            float squish = squishA * squishB * movementBounce * 0.25f;
             earScale.X *= 1f - squish * 0.6f;
             earScale.Y *= 1f + squish * 1.3f;
 
@@ -180,48 +205,77 @@ namespace SylvVanity.Content.Items
             Vector2 ribbonTargetArea = new(200f);
             RibbonTarget.Request((int)ribbonTargetArea.X, (int)ribbonTargetArea.Y, identifier, () =>
             {
-                ManagedShader feelerShader = ShaderManager.GetShader("SylvVanity.LucilleFeelerShader");
-                feelerShader.TrySetParameter("feelerColorStart", 0.61f);
-                feelerShader.TrySetParameter("colorSpacingFactor", 1.9f);
-                feelerShader.TrySetParameter("pixelationFactor", 40f);
-                feelerShader.TrySetParameter("outlineColor", new Color(109, 102, 112).ToVector4());
-                feelerShader.Apply();
+                Asset<Effect>? feelerShaderAsset = ShaderSystem.FeelerRibbonShader;
+                if (feelerShaderAsset is null)
+                    return;
 
-                PrimitiveSettings settings = new(FeelerWidthFunction, FeelerColorFunction, Shader: feelerShader, UseUnscaledMatrix: true,
-                    ProjectionAreaWidth: Main.instance.GraphicsDevice.Viewport.Width, ProjectionAreaHeight: Main.instance.GraphicsDevice.Viewport.Height);
+                Effect feelerShader = feelerShaderAsset.Value;
+                feelerShader.Parameters["feelerColorStart"]?.SetValue(0.61f);
+                feelerShader.Parameters["colorSpacingFactor"]?.SetValue(1.9f);
+                feelerShader.Parameters["pixelationFactor"]?.SetValue(40f);
+                feelerShader.Parameters["outlineColor"]?.SetValue(new Color(109, 102, 112).ToVector4());
+                feelerShader.Parameters["uWorldViewProjection"].SetValue(Matrix.CreateOrthographicOffCenter(0f, ribbonTargetArea.X, ribbonTargetArea.Y, 0f, -1f, 1f));
+                feelerShader.CurrentTechnique.Passes[0].Apply();
 
-                Vector2 targetCenter = ribbonTargetArea * 0.5f + Main.screenPosition;
+                // Construct draw positions.
+                Vector2 targetCenter = ribbonTargetArea * 0.5f;
                 Vector2[] feelerDrawPositions = new Vector2[16];
                 for (int i = 0; i < feelerDrawPositions.Length; i++)
                 {
                     float completionRatio = i / (float)(feelerDrawPositions.Length - 1f);
-                    float verticalOffsetInterpolant = Utilities.InverseLerp(0.1f, 0.5f, completionRatio);
+                    float verticalOffsetInterpolant = Utils.GetLerpValue(0.1f, 0.5f, completionRatio, true);
                     Vector2 verticalOffset = Vector2.UnitY * MathF.Sin(MathHelper.Pi * completionRatio * 2f - Main.GlobalTimeWrappedHourly * 3.2f + direction.X * 2f) * verticalOffsetInterpolant * 2.6f;
 
                     feelerDrawPositions[i] = targetCenter + direction * i * 1.9f + verticalOffset + endOffset * completionRatio;
                 }
 
-                PrimitiveRenderer.RenderTrail(feelerDrawPositions, settings, 40);
+                // Create a vertex trail from the draw positions.
+                VertexPosition2DColorTexture[] vertices = new VertexPosition2DColorTexture[(feelerDrawPositions.Length - 1) * 2];
+                for (int i = 0; i < feelerDrawPositions.Length - 1; i++)
+                {
+                    float completionRatio = i / (float)(feelerDrawPositions.Length - 2f);
+                    Vector2 basePosition = feelerDrawPositions[i];
+                    Vector2 perpendicular = (feelerDrawPositions[i + 1] - feelerDrawPositions[i]).SafeNormalize(Vector2.Zero).RotatedBy(MathHelper.PiOver2);
+
+                    float width = FeelerWidthFunction();
+                    Color color = FeelerColorFunction();
+
+                    Vector2 left = basePosition - perpendicular * width;
+                    Vector2 right = basePosition + perpendicular * width;
+
+                    Vector2 leftTextureCoord = new(completionRatio, 0.5f - width * 0.5f);
+                    Vector2 rightTextureCoord = new(completionRatio, 0.5f + width * 0.5f);
+
+                    vertices[i * 2] = new(left, color, leftTextureCoord, width);
+                    vertices[i * 2 + 1] = new(right, color, rightTextureCoord, width);
+                }
+
+                // Render the vertex trail.
+                Main.instance.GraphicsDevice.DrawUserPrimitives(PrimitiveType.TriangleStrip, vertices, 0, vertices.Length - 2);
             });
 
-            if (!RibbonTarget.TryGetTarget(identifier, out RenderTarget2D? target) || target is null)
+            if (!RibbonTarget.TryGetTarget(identifier, out RenderTarget2D? target) || target is null || ShaderSystem.PixelationShader is null)
                 return;
 
-            ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
-            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 0.8f / target.Size());
-            pixelationShader.Apply();
+            Effect pixelationShader = ShaderSystem.PixelationShader.Value;
+            pixelationShader.Parameters["pixelationFactor"]?.SetValue(Vector2.One * 0.8f / target.Size());
+            pixelationShader.CurrentTechnique.Passes[0].Apply();
+
             Main.spriteBatch.Draw(target, center, null, lightColor, 0f, target.Size() * 0.5f, 1f, 0, 0f);
         }
 
-        private static float FeelerWidthFunction(float completionRatio) => 2.85f;
+        private static float FeelerWidthFunction() => 2.85f;
 
-        private static Color FeelerColorFunction(float completionRatio) => new(232, 229, 245);
+        private static Color FeelerColorFunction() => new(232, 229, 245);
 
         private static void ApplyPixelation(Texture2D texture)
         {
-            ManagedShader pixelationShader = ShaderManager.GetShader("Luminance.PixelationShader");
-            pixelationShader.TrySetParameter("pixelationFactor", Vector2.One * 2f / texture.Size());
-            pixelationShader.Apply();
+            if (ShaderSystem.PixelationShader is null)
+                return;
+
+            Effect pixelationShader = ShaderSystem.PixelationShader.Value;
+            pixelationShader.Parameters["pixelationFactor"]?.SetValue(Vector2.One * 2f / texture.Size());
+            pixelationShader.CurrentTechnique.Passes[0].Apply();
         }
     }
 }
