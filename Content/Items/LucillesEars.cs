@@ -29,7 +29,8 @@ namespace SylvVanity.Content.Items
         {
             CreateRecipe().
                 AddIngredient(ItemID.Silk, 10).
-                AddIngredient(ItemID.GiantBow);
+                AddIngredient(ItemID.GiantBow).
+                Register();
         }
     }
 }
