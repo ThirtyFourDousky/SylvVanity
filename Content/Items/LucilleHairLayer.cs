@@ -135,7 +135,7 @@ namespace SylvVanity.Content.Items
 
             // Rotate the ears based on the player's rotation.
             Vector2 targetSize = new(Main.instance.GraphicsDevice.Viewport.Width, Main.instance.GraphicsDevice.Viewport.Height);
-            Vector2 earDrawPosition = targetSize * 0.5f + new Vector2(drawPlayer.direction == 1 ? 1f : -11f, -4f);
+            Vector2 earDrawPosition = targetSize * 0.5f + new Vector2(drawPlayer.direction == 1 ? 1f : -1f, drawPlayer.gravDir == 1 ? -4f : 16f);
 
             Texture2D leftEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarLeft").Value;
             Texture2D rightEar = ModContent.Request<Texture2D>("SylvVanity/Content/Items/LucillesEarRight").Value;
@@ -150,7 +150,7 @@ namespace SylvVanity.Content.Items
             if (hairFrame.Y == 56 || hairFrame.Y == 112 || hairFrame.Y == 168 || hairFrame.Y == 448 || hairFrame.Y == 504 || hairFrame.Y == 560)
                 earDrawPosition -= up * 2f;
 
-            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + forward * (drawPlayer.direction == 1 ? -4f : 14f);
+            Vector2 leftEarDrawPosition = earDrawPosition.Floor() + forward * (drawPlayer.direction == 1 ? -4f : 4f);
             Vector2 rightEarDrawPosition = leftEarDrawPosition + forward * drawPlayer.direction * 12f;
 
             // Calculate the base ear rotation.
@@ -160,8 +160,8 @@ namespace SylvVanity.Content.Items
             float easedTwitchAnimationCompletion = 1f - MathF.Pow(1f - vanityPlayer.EarTwitchAnimationCompletion, 3f);
             float twitchAngleOffset = MathF.Sin(MathHelper.Pi * easedTwitchAnimationCompletion) * drawPlayer.direction * 0.26f;
 
-            float leftEarRotation = earRotation - twitchAngleOffset;
-            float rightEarRotation = earRotation + twitchAngleOffset * 0.04f;
+            float leftEarRotation = (earRotation - twitchAngleOffset) * drawPlayer.gravDir;
+            float rightEarRotation = (earRotation + twitchAngleOffset * 0.04f) * drawPlayer.gravDir;
 
             // Calculate the size of the ears.
             Vector2 earScale = Vector2.One * 0.5f;
@@ -174,30 +174,30 @@ namespace SylvVanity.Content.Items
             earScale.Y *= 1f + squish * 1.3f;
 
             // Draw ears.
-            SpriteEffects earDirection = drawPlayer.direction == 1 ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+            SpriteEffects earDirection = (drawPlayer.direction == 1 ? SpriteEffects.None : SpriteEffects.FlipHorizontally) | (drawPlayer.gravDir == 1 ? SpriteEffects.None : SpriteEffects.FlipVertically);
 
             ApplyPixelation(leftEar);
-            Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, Color.White, leftEarRotation, new Vector2(leftEar.Width * 0.5f, leftEar.Height), earScale, earDirection, 0);
+            Main.spriteBatch.Draw(leftEar, leftEarDrawPosition, null, Color.White, leftEarRotation, new Vector2(leftEar.Width * 0.5f, drawPlayer.gravDir == 1 ? leftEar.Height : 0f), earScale, earDirection, 0);
 
             ApplyPixelation(rightEar);
-            Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, rightEar.Height), earScale, earDirection, 0);
+            Main.spriteBatch.Draw(rightEar, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEar.Width * 0.5f, drawPlayer.gravDir == 1 ? rightEar.Height : 0f), earScale, earDirection, 0);
 
             // Draw feelers.
-            Vector2 feelerCenter = rightEarDrawPosition - up * 4f;
+            Vector2 feelerCenter = rightEarDrawPosition + (drawPlayer.gravDir == 1 ? -(up * 4f) : (up * 4f));
             Vector2 velocityOffset = -vanityPlayer.VelocityMovingAverage * new Vector2(0.022f, 0.011f);
             Vector2 feelerEndOffset = Vector2.UnitY * MathF.Abs(vanityPlayer.VelocityMovingAverage.X) * -0.6f;
 
             Vector2 leftFeelerDirection = -Vector2.UnitX * drawPlayer.direction + velocityOffset;
             Vector2 rightFeelerDirection = Vector2.UnitX * drawPlayer.direction * 0.7f + velocityOffset;
-            DrawRibbonFeeler(feelerCenter, leftFeelerDirection, feelerEndOffset, Color.White, drawPlayer.whoAmI);
-            DrawRibbonFeeler(feelerCenter, rightFeelerDirection, feelerEndOffset, Color.White, drawPlayer.whoAmI + 1000);
+            DrawRibbonFeeler(feelerCenter, leftFeelerDirection, feelerEndOffset, Color.White, drawPlayer.whoAmI, drawPlayer.gravDir != 1);
+            DrawRibbonFeeler(feelerCenter, rightFeelerDirection, feelerEndOffset, Color.White, drawPlayer.whoAmI + 1000, drawPlayer.gravDir != 1);
 
             // Draw the ribbon again to ensure that it layers over the feelers.
             ApplyPixelation(rightEarRibbon);
-            Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, rightEarRibbon.Height), earScale, earDirection, 0);
+            Main.spriteBatch.Draw(rightEarRibbon, rightEarDrawPosition, null, Color.White, rightEarRotation, new Vector2(rightEarRibbon.Width * 0.5f, drawPlayer.gravDir == 1 ? rightEarRibbon.Height : 0), earScale, earDirection, 0);
         }
 
-        private static void DrawRibbonFeeler(Vector2 center, Vector2 direction, Vector2 endOffset, Color lightColor, int identifier)
+        private static void DrawRibbonFeeler(Vector2 center, Vector2 direction, Vector2 endOffset, Color lightColor, int identifier, bool UpsideDown)
         {
             if (RibbonTarget is null)
                 return;
